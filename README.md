@@ -1,8 +1,6 @@
-#AirBnB CLONE
+# AirBnB CLONE
+[![hbnb-logo.png](https://i.postimg.cc/y8pv5pZ8/hbnb-logo.png)](https://postimg.cc/WdrGqn8B)
 <p align="center">
-  <img src="[![hbnb-logo.png](https://i.postimg.cc/y8pv5pZ8/hbnb-logo.png)](https://postimg.cc/WdrGqn8B)" alt="HolbertonBnB logo">
-</p>
-
 <h1 align="center">HolbertonBnB</h1>
 <p align="center">An AirBnB clone.</p>
 
