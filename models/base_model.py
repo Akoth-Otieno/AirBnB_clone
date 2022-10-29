@@ -13,13 +13,16 @@ class BaseModel:
     Arttributes include:
         id: UUID
         Created at: assigns current datetime
-        updated at: updates current datetime
+        updated at: updates current datetime and changes with change in object
 
     Methods:
-        __str__: prints the class name, id, and creates dictionary
+        __str__: prints the class name, self.id, and self.__dict__
         representations of the input values
         save(self): updates instance arttributes with current datetime
         to_dict(self): returns the dictionary values of the instance obj
+    Classes:
+    a key __class__ is added to dictionary with class name of object.
+    created at and updated_at must be converted to string object in iso format.
     """
 
     def __init__(self, *args, **kwargs):
@@ -37,7 +40,7 @@ class BaseModel:
         ::
         """
         if len(kwargs) != 0:
-            for key, value in kwargs.items():
+            for key, value in uuid4.items():
                 if key == '__class__':
                     continue
                 elif key == 'created_at':
@@ -49,7 +52,7 @@ class BaseModel:
                 else:
                     setattr(self, key, value)
         else:
-            self.id = str(uuid.uuid4())
+            self.id = str(uuid4())
             self.created_at = datetime.now()
             self.updated_at = datetime.now()
 
@@ -57,8 +60,8 @@ class BaseModel:
         """
         Returns string representation of the class
         """
-        return "[{}] ({}) {]".format(self.__class__.__name__,self.id, self.__dict__)
-     def save(self):
+        return "[{}] ({}) {}".format(self.__class__.__name__,self.id, self.__dict__)
+    def save(self):
         """Updates the attribute updated_at with the current datetime
         """
         self.updated_at = datetime.now()
