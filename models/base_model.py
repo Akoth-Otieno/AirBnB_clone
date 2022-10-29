@@ -40,7 +40,7 @@ class BaseModel:
         ::
         """
         if len(kwargs) != 0:
-            for key, value in uuid4.items():
+            for key, value in kwargs.items():
                 if key == '__class__':
                     continue
                 elif key == 'created_at':
