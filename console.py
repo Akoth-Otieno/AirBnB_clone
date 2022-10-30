@@ -30,6 +30,8 @@ class HBNBCommand(cmd.Cmd):
     """
     prompt = '(hbnb) '
     __file_path = 'file.json'
+    model_list = ['BaseModel', 'User', 'State',
+                  'City', 'Amenity', 'Place', 'Review']
 
     def do_quit(self, inp):
         '''do_quit - Quit command to exit the program'''
