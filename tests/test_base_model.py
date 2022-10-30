@@ -9,7 +9,6 @@ unittest classes:
 """
 
 
-import pycode
 import os
 import models
 import unittest
