@@ -11,7 +11,16 @@ import cmd
 import sys
 import argparser
 from from models.base_model import BaseModel
-
+from models.user import User
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.place import Place
+from models.review import Review
+import models
+import os.path
+import json
+import shlex
 
 class HBNBCommand(cmd.Cmd):
     """HBNBCommand is the console for the airbnb clone.
@@ -21,9 +30,17 @@ class HBNBCommand(cmd.Cmd):
      prompt = '(hbnb) '
      __file_path = 'file.json'
 
+     def do_quit(self, inp):
+        '''do_quit - Quit command to exit the program'''
+        return True
 
+    def emptyline(self):
+        '''emptyline - do nothing'''
+        pass
 
-
+    def do_EOF(self, inp):
+        '''do_EOF - Quit command to exit the program'''
+        return True
 
 
 if __name__ == '__main__':
