@@ -7,6 +7,7 @@ from uuid import uuid4
 from datetime import datetime
 import models
 
+
 class BaseModel:
     """Custom base class for the project
 
@@ -60,7 +61,8 @@ class BaseModel:
         """
         Returns string representation of the class
         """
-        return "[{}] ({}) {}".format(self.__class__.__name__,self.id, self.__dict__)
+        return(f"{self.__class__.__name} {self.id} {self.__dict__}")
+
     def save(self):
         """Updates the attribute updated_at with the current datetime
         """
@@ -76,4 +78,3 @@ class BaseModel:
         res['updated_at'] = res['updated_at'].isoformat()
 
         return res
-
