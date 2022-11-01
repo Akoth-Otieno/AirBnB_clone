@@ -1,252 +1,209 @@
 #!/usr/bin/python3
-"""The entry point to the console for the airbnb clone.
-It implements:
-   - quit and EOF to exit the program
-   - help
-   - a custom prompt: (hbnb)
-   - an empty line + ENTER shouldn’t execute anything
-"""
-
+"""Defines the HBnB console."""
 import cmd
-import sys
-import models
-import os.path
-import json
-import shlex
+import re
+from shlex import split
+from models import storage
 from models.base_model import BaseModel
 from models.user import User
 from models.state import State
 from models.city import City
-from models.amenity import Amenity
 from models.place import Place
+from models.amenity import Amenity
 from models.review import Review
 
 
+def parse(arg):
+    curly_braces = re.search(r"\{(.*?)\}", arg)
+    brackets = re.search(r"\[(.*?)\]", arg)
+    if curly_braces is None:
+        if brackets is None:
+            return [i.strip(",") for i in split(arg)]
+        else:
+            lexer = split(arg[:brackets.span()[0]])
+            retl = [i.strip(",") for i in lexer]
+            retl.append(brackets.group())
+            return retl
+    else:
+        lexer = split(arg[:curly_braces.span()[0]])
+        retl = [i.strip(",") for i in lexer]
+        retl.append(curly_braces.group())
+        return retl
+
+
 class HBNBCommand(cmd.Cmd):
-    """HBNBCommand is the console for the airbnb clone.
+    """Defines the HolbertonBnB command interpreter.
     Attributes:
         prompt (str): The command prompt.
     """
-    prompt = '(hbnb) '
-    __file_path = 'file.json'
-    model_list = ['BaseModel', 'User', 'State',
-                  'City', 'Amenity', 'Place', 'Review']
 
-    def do_quit(self, inp):
-        '''do_quit - Quit command to exit the program'''
-        return True
+    prompt = "(hbnb) "
+    __classes = {
+        "BaseModel",
+        "User",
+        "State",
+        "City",
+        "Place",
+        "Amenity",
+        "Review"
+    }
 
     def emptyline(self):
-        '''emptyline - do nothing'''
+        """Do nothing upon receiving an empty line."""
         pass
 
-    def do_EOF(self, inp):
-        '''do_EOF - Quit command to exit the program'''
+    def default(self, arg):
+        """Default behavior for cmd module when input is invalid"""
+        argdict = {
+            "all": self.do_all,
+            "show": self.do_show,
+            "destroy": self.do_destroy,
+            "count": self.do_count,
+            "update": self.do_update
+        }
+        match = re.search(r"\.", arg)
+        if match is not None:
+            argl = [arg[:match.span()[0]], arg[match.span()[1]:]]
+            match = re.search(r"\((.*?)\)", argl[1])
+            if match is not None:
+                command = [argl[1][:match.span()[0]], match.group()[1:-1]]
+                if command[0] in argdict.keys():
+                    call = "{} {}".format(argl[0], command[1])
+                    return argdict[command[0]](call)
+        print("*** Unknown syntax: {}".format(arg))
+        return False
+
+    def do_quit(self, arg):
+        """Quit command to exit the program."""
         return True
 
-    def do_create(self, inp):
-        '''do_create - create a new instance of a model'''
-        model_list = ['BaseModel', 'User', 'State',
-                      'City', 'Amenity', 'Place', 'Review']
-        if len(inp) == 0:
+    def do_EOF(self, arg):
+        """EOF signal to exit the program."""
+        print("")
+        return True
+
+    def do_create(self, arg):
+        """Usage: create <class>
+        Create a new class instance and print its id.
+        """
+        argl = parse(arg)
+        if len(argl) == 0:
             print("** class name missing **")
-        elif inp in self.model_list:
-            new = eval(inp)()
-            new.save()
-            print(new.id)
-        else:
+        elif argl[0] not in HBNBCommand.__classes:
             print("** class doesn't exist **")
-
-    def do_show(self, inp):
-        '''do_show - show prints the string representation of an instance'''
-        if len(inp) == 0:
-            print("** class name missing **")
         else:
-            a_list = inp.split()
-            if a_list[0] not in self.model_list:
-                print("** class doesn't exist **")
-            elif len(a_list) == 1:
-                print("** instance id missing **")
-            elif a_list[0] in self.model_list and len(a_list) == 2:
-                if os.path.isfile(self.__file_path):
-                    with open(self.__file_path,
-                              encoding='utf-8', mode='r') as f:
-                        a_string = f.read()
-                        if a_string:
-                            a_dict = json.loads(a_string)
-                            a_list[1] = a_list[1].replace("'", "")
-                            a_list[1] = a_list[1].replace("\"", "")
-                            if a_list[0] + '.' + a_list[1] in a_dict:
-                                print(eval(a_list[0])
-                                      (**(a_dict[a_list[0] +
-                                                 '.' + a_list[1]])))
-                            else:
-                                print("** no instance found **")
-                        else:
-                            print("** no instance found **")
-                else:
-                    print("** no instance found **")
+            print(eval(argl[0])().id)
+            storage.save()
 
-    def do_destroy(self, inp):
-        '''do_destroy - destroy an instance'''
-        if len(inp) == 0:
+    def do_show(self, arg):
+        """Usage: show <class> <id> or <class>.show(<id>)
+        Display the string representation of a class instance of a given id.
+        """
+        argl = parse(arg)
+        objdict = storage.all()
+        if len(argl) == 0:
             print("** class name missing **")
+        elif argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+        elif len(argl) == 1:
+            print("** instance id missing **")
+        elif "{}.{}".format(argl[0], argl[1]) not in objdict:
+            print("** no instance found **")
         else:
-            a_list = inp.split()
-            if a_list[0] not in self.model_list:
-                print("** class doesn't exist **")
-            elif len(a_list) == 1:
-                print("** instance id missing **")
-            elif a_list[0] in self.model_list and len(a_list) == 2:
-                if os.path.isfile(self.__file_path):
-                    with open(self.__file_path,
-                              encoding='utf-8', mode='r') as f:
-                        a_string = f.read()
-                        a_dict = json.loads(a_string)
-                        a_list[1] = a_list[1].replace("'", "")
-                        a_list[1] = a_list[1].replace("\"", "")
-                        if a_list[0] + '.' + a_list[1] in a_dict:
-                            del a_dict[a_list[0] + '.' + a_list[1]]
-                        else:
-                            print("** no instance found **")
-                    with open(self.__file_path,
-                              encoding='utf-8', mode='w') as f:
-                        f.write(json.dumps(a_dict))
-                else:
-                    print("** no instance found **")
+            print(objdict["{}.{}".format(argl[0], argl[1])])
 
-    def do_all(self, inp):
-        '''do_all - show all instances of a class or all'''
-        flag = 0
-        flag2 = 0
-        if len(inp) == 0:
-            flag = 1
-            flag2 = 1
-        if len(inp) > 0:
-            a_list = inp.split()
-            if a_list[0] in self.model_list and len(a_list) == 1:
-                flag = 1
-            else:
-                print("** class doesn't exist **")
-                flag = 0
-        if flag == 1:
-            if flag2 == 0:
-                eval_class = eval(a_list[0])
-            instances = []
-            if os.path.isfile(self.__file_path):
-                with open(self.__file_path, encoding='utf-8', mode='r') as f:
-                    a_string = f.read()
-                    if a_string:
-                        a_dict = json.loads(a_string)
-                        for key, value in a_dict.items():
-                            if flag2 == 0:
-                                if a_list[0] in key:
-                                    instances.append(eval_class.__str__
-                                                     (eval_class(**(value))))
-                            if flag2 == 1:
-                                eval_class2 = eval(value['__class__'])
-                                instances.append(eval_class2.__str__
-                                                 (eval_class2(**(value))))
-                        print(instances)
-            else:
-                list_vacia = []
-                print(list_vacia)
-
-    def do_update(self, inp):
-        '''do_update - update an instance'''
-        if len(inp) == 0:
+    def do_destroy(self, arg):
+        """Usage: destroy <class> <id> or <class>.destroy(<id>)
+        Delete a class instance of a given id."""
+        argl = parse(arg)
+        objdict = storage.all()
+        if len(argl) == 0:
             print("** class name missing **")
+        elif argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+        elif len(argl) == 1:
+            print("** instance id missing **")
+        elif "{}.{}".format(argl[0], argl[1]) not in objdict.keys():
+            print("** no instance found **")
         else:
-            a_list = shlex.split(inp)
-            if a_list[0] not in self.model_list:
-                print("** class doesn't exist **")
-            elif len(a_list) == 1:
-                print("** instance id missing **")
-            elif len(a_list) == 2:
-                print("** attribute name missing **")
-            elif len(a_list) == 3:
+            del objdict["{}.{}".format(argl[0], argl[1])]
+            storage.save()
+
+    def do_all(self, arg):
+        """Usage: all or all <class> or <class>.all()
+        Display string representations of all instances of a given class.
+        If no class is specified, displays all instantiated objects."""
+        argl = parse(arg)
+        if len(argl) > 0 and argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+        else:
+            objl = []
+            for obj in storage.all().values():
+                if len(argl) > 0 and argl[0] == obj.__class__.__name__:
+                    objl.append(obj.__str__())
+                elif len(argl) == 0:
+                    objl.append(obj.__str__())
+            print(objl)
+
+    def do_count(self, arg):
+        """Usage: count <class> or <class>.count()
+        Retrieve the number of instances of a given class."""
+        argl = parse(arg)
+        count = 0
+        for obj in storage.all().values():
+            if argl[0] == obj.__class__.__name__:
+                count += 1
+        print(count)
+
+    def do_update(self, arg):
+        """Usage: update <class> <id> <attribute_name> <attribute_value> or
+       <class>.update(<id>, <attribute_name>, <attribute_value>) or
+       <class>.update(<id>, <dictionary>)
+        Update a class instance of a given id by adding or updating
+        a given attribute key/value pair or dictionary."""
+        argl = parse(arg)
+        objdict = storage.all()
+
+        if len(argl) == 0:
+            print("** class name missing **")
+            return False
+        if argl[0] not in HBNBCommand.__classes:
+            print("** class doesn't exist **")
+            return False
+        if len(argl) == 1:
+            print("** instance id missing **")
+            return False
+        if "{}.{}".format(argl[0], argl[1]) not in objdict.keys():
+            print("** no instance found **")
+            return False
+        if len(argl) == 2:
+            print("** attribute name missing **")
+            return False
+        if len(argl) == 3:
+            try:
+                type(eval(argl[2])) != dict
+            except NameError:
                 print("** value missing **")
-            elif a_list[0] in self.model_list and len(a_list) >= 4:
-                a_list[3] = a_list[3].replace("'", "")
-                a_list[3] = a_list[3].replace("\"", "")
-                if os.path.isfile(self.__file_path):
-                    with open(self.__file_path,
-                              encoding='utf-8', mode='r') as f:
-                        a_string = f.read()
-                        a_dict = json.loads(a_string)
-                        if a_list[0] + '.' + a_list[1] in a_dict:
-                            a_dict[a_list[0] + '.' +
-                                   a_list[1]][a_list[2]] = a_list[3]
-                            dict1 = a_dict[a_list[0] + '.' + a_list[1]]
-                            new_instance = eval(a_list[0])(**dict1)
-                            new_instance.save()
-                        else:
-                            print("** no instance found **")
+                return False
+
+        if len(argl) == 4:
+            obj = objdict["{}.{}".format(argl[0], argl[1])]
+            if argl[2] in obj.__class__.__dict__.keys():
+                valtype = type(obj.__class__.__dict__[argl[2]])
+                obj.__dict__[argl[2]] = valtype(argl[3])
+            else:
+                obj.__dict__[argl[2]] = argl[3]
+        elif type(eval(argl[2])) == dict:
+            obj = objdict["{}.{}".format(argl[0], argl[1])]
+            for k, v in eval(argl[2]).items():
+                if (k in obj.__class__.__dict__.keys() and
+                        type(obj.__class__.__dict__[k]) in {str, int, float}):
+                    valtype = type(obj.__class__.__dict__[k])
+                    obj.__dict__[k] = valtype(v)
                 else:
-                    print("** no instance found **")
-
-    def do_count(self, inp):
-        '''do_count - return the number of instances'''
-        if len(inp) > 0:
-            a_list = inp.split()
-            if a_list[0] in self.model_list and len(a_list) == 1:
-                count = 0
-                if os.path.isfile(self.__file_path):
-                    with open(self.__file_path, encoding='utf-8',
-                              mode='r') as f:
-                        a_string = f.read()
-                        if a_string:
-                            a_dict = json.loads(a_string)
-                            for key, value in a_dict.items():
-                                if a_list[0] in key:
-                                    count += 1
-                print(count)
-
-    def default(self, inp):
-        '''default - process other type of input'''
-        tokens = inp.split('.')
-        if tokens is not None and len(tokens) > 1:
-            method = tokens[1].split('(')
-            if method is not None:
-                arguments = method[1].split(',')
-                if arguments is not None:
-                    for i in range(len(arguments)):
-                        arguments[i] = arguments[i].replace("'", "")
-                        arguments[i] = arguments[i].replace(")", "")
-                        final_list = [tokens[0]] + arguments
-                        str_final = ' '.join(str(e) for e in final_list)
-                        str_final = str_final.replace(")", "")
-                        if method[0] == 'all' and len(arguments) == 1:
-                            return(self.do_all(str_final))
-                        elif method[0] == 'show' and len(arguments) == 1:
-                            return(self.do_show(str_final))
-                        elif method[0] == 'destroy' and len(arguments) == 1:
-                            return(self.do_destroy(str_final))
-                        elif method[0] == 'update':
-                            if "{" in inp:
-                                update_list = [tokens[0]]
-                                str_bef_dict = inp.split(',', 1)[-1]
-                                str_bef_dict = str_bef_dict.replace(")", "")
-                                str_bef_dict = str_bef_dict.replace("'", "\"")
-                                dict1 = eval(str_bef_dict)
-                                if type(dict1) is dict:
-                                    for key, value in dict1.items():
-                                        update_list = [tokens[0]]
-                                        update_list.append(arguments[0])
-                                        update_list.append(key)
-                                        update_list.append(value)
-                                        str_update = ' '.join(
-                                            str(e) for e in update_list)
-                                        self.do_update(str_update)
-                                return
-                            else:
-                                return(self.do_update(str_final))
-                        elif method[0] == 'count' and len(arguments) == 1:
-                            return(self.do_count(str_final))
-                        else:
-                            return(cmd.Cmd.default(self, inp))
-        return(cmd.Cmd.default(self, inp))
+                    obj.__dict__[k] = v
+        storage.save()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     HBNBCommand().cmdloop()
